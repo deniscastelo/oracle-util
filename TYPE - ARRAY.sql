@@ -1,0 +1,13 @@
+CREATE OR REPLACE TYPE "ARRAY_NAME" AS VARRAY(200000) OF VARCHAR2(4000)
+
+--Como utilizar o ARRAY em Test / Debug
+
+DECLARE
+
+	var ARRAY_NAME;
+
+BEGIN
+
+	var := ARRAY_NAME(1,2,3,...);
+
+END;

@@ -35,7 +35,7 @@ CREATE OR REPLACE PACKAGE BODY PCK_CALL_WEBSERVICE IS
   
     REQ    UTL_HTTP.REQ;
     RESP   UTL_HTTP.RESP;
-    BUFFER VARCHAR2(32767);
+    RESP_VAL CLOB;
   
   BEGIN
   
@@ -49,28 +49,26 @@ CREATE OR REPLACE PACKAGE BODY PCK_CALL_WEBSERVICE IS
   
     DBMS_OUTPUT.PUT_LINE('HTTP Status Code: ' || RESP.STATUS_CODE);
   
-    BEGIN
+    UTL_HTTP.READ_TEXT(RESP, RESP_VAL);
     
-      LOOP
-      
-        UTL_HTTP.READ_LINE(RESP, BUFFER);
-        DBMS_OUTPUT.PUT_LINE(BUFFER);
-      
-      END LOOP;
-    
-    EXCEPTION
-      WHEN UTL_HTTP.END_OF_BODY THEN
-      
-        NULL;
-      
-    END;
+    DBMS_OUTPUT.PUT_LINE(RESP_VAL);
   
     UTL_HTTP.END_RESPONSE(RESP);
   
   EXCEPTION
     WHEN OTHERS THEN
     
-      NULL;
+      BEGIN
+          
+            UTL_HTTP.END_RESPONSE(RESP);
+          
+          EXCEPTION
+            WHEN OTHERS THEN
+            
+              NULL;
+            
+          END;
+      
       DBMS_OUTPUT.PUT_LINE(SQLERRM);
     
   END P_CALL_WEBSERVICE_JSON;

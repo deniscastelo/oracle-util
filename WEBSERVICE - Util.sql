@@ -1,6 +1,13 @@
-CREATE OR REPLACE PACKAGE PCK_CALL_WEBSERVICE IS
+CREATE OR REPLACE PACKAGE PCK_UTL_WEBSERVICE IS
 
   PROCEDURE P_CALL_WEBSERVICE_JSON(IURL IN VARCHAR2, IJSON IN VARCHAR2);
+
+  PROCEDURE P_CALL_WEBSERVICE_JSON_OUT(IURL   IN VARCHAR2,
+                                       IJSON  IN CLOB,
+                                       METHOD IN VARCHAR2,
+                                       OJSON  OUT CLOB);
+
+  PROCEDURE P_CALL_WEBSERVICE_XML(IURL IN VARCHAR2, IXML IN XMLTYPE);
 
   PROCEDURE P_CALL_WEBSERVICE_XML_OUT(IURL         IN VARCHAR2,
                                       IXML         IN XMLTYPE,
@@ -10,14 +17,14 @@ CREATE OR REPLACE PACKAGE PCK_CALL_WEBSERVICE IS
 
   FUNCTION F_EXTRACT_XML_NODE(IXML IN XMLTYPE, INODE IN VARCHAR2)
     RETURN VARCHAR2;
-    
+
   FUNCTION F_XML_BEAUTIFIER(IXML IN xmltype) RETURN CLOB;
 
-END PCK_CALL_WEBSERVICE;
+END PCK_UTL_WEBSERVICE;
 
 /
 
-CREATE OR REPLACE PACKAGE BODY PCK_CALL_WEBSERVICE IS
+CREATE OR REPLACE PACKAGE BODY PCK_UTL_WEBSERVICE IS
 
   --------------------------
   --P_CALL_WEBSERVICE_JSON--
@@ -25,12 +32,12 @@ CREATE OR REPLACE PACKAGE BODY PCK_CALL_WEBSERVICE IS
 
   -- Author  : Kauan Polydoro
   -- Created : 10/05/2019
-  -- Purpose : Procedure utilizada para enviar um JSON via WebService(POST)
+  -- Purpose : Procedure utilizada para enviar um JSON via WebService (POST)
 
   PROCEDURE P_CALL_WEBSERVICE_JSON(IURL IN VARCHAR2, IJSON IN VARCHAR2) IS
   
-    REQ    UTL_HTTP.REQ;
-    RESP   UTL_HTTP.RESP;
+    REQ      UTL_HTTP.REQ;
+    RESP     UTL_HTTP.RESP;
     RESP_VAL CLOB;
   
   BEGIN
@@ -43,10 +50,10 @@ CREATE OR REPLACE PACKAGE BODY PCK_CALL_WEBSERVICE IS
   
     RESP := UTL_HTTP.GET_RESPONSE(REQ);
   
-    DBMS_OUTPUT.PUT_LINE('HTTP Status Code: ' || RESP.STATUS_CODE);
+    DBMS_OUTPUT.PUT_LINE('Http Status Code: ' || RESP.STATUS_CODE);
   
     UTL_HTTP.READ_TEXT(RESP, RESP_VAL);
-    
+  
     DBMS_OUTPUT.PUT_LINE(RESP_VAL);
   
     UTL_HTTP.END_RESPONSE(RESP);
@@ -55,19 +62,119 @@ CREATE OR REPLACE PACKAGE BODY PCK_CALL_WEBSERVICE IS
     WHEN OTHERS THEN
     
       BEGIN
-          
-            UTL_HTTP.END_RESPONSE(RESP);
-          
-          EXCEPTION
-            WHEN OTHERS THEN
-            
-              NULL;
-            
-          END;
       
+        UTL_HTTP.END_RESPONSE(RESP);
+      
+      EXCEPTION
+        WHEN OTHERS THEN
+        
+          NULL;
+        
+      END;
+    
       DBMS_OUTPUT.PUT_LINE(SQLERRM);
     
   END P_CALL_WEBSERVICE_JSON;
+
+  ------------------------------
+  --P_CALL_WEBSERVICE_JSON_OUT--
+  ------------------------------
+
+  -- Author  : Kauan Polydoro
+  -- Created : 01/10/2019
+  -- Purpose : Procedure utilizada para enviar um JSON via WebService e ler o retorno
+
+  PROCEDURE P_CALL_WEBSERVICE_JSON_OUT(IURL   IN VARCHAR2,
+                                       IJSON  IN CLOB, --JSON de Entrada
+                                       METHOD IN VARCHAR2, --(POST, GET, PUT, ...)
+                                       OJSON  OUT CLOB) IS
+  
+    REQ  UTL_HTTP.REQ;
+    RESP UTL_HTTP.RESP;
+  
+  BEGIN
+  
+    REQ := UTL_HTTP.BEGIN_REQUEST(IURL, METHOD);
+    UTL_HTTP.SET_HEADER(REQ, 'Content-Type', 'application/json');
+    UTL_HTTP.SET_HEADER(REQ, 'Content-Length', LENGTH(IJSON));
+  
+    UTL_HTTP.WRITE_TEXT(REQ, IJSON);
+  
+    RESP := UTL_HTTP.GET_RESPONSE(REQ);
+  
+    DBMS_OUTPUT.PUT_LINE('Http Status Code: ' || RESP.STATUS_CODE);
+  
+    UTL_HTTP.READ_TEXT(RESP, OJSON);
+  
+    UTL_HTTP.END_RESPONSE(RESP);
+  
+  EXCEPTION
+    WHEN OTHERS THEN
+    
+      BEGIN
+      
+        UTL_HTTP.END_RESPONSE(RESP);
+      
+      EXCEPTION
+        WHEN OTHERS THEN
+        
+          NULL;
+        
+      END;
+    
+      RAISE;
+    
+  END P_CALL_WEBSERVICE_JSON_OUT;
+
+  -------------------------
+  --P_CALL_WEBSERVICE_XML--
+  -------------------------
+
+  -- Author  : Kauan Polydoro
+  -- Created : 10/05/2019
+  -- Purpose : Procedure utilizada para enviar um XML via WebService (POST)
+
+  PROCEDURE P_CALL_WEBSERVICE_XML(IURL IN VARCHAR2, IXML IN XMLTYPE) IS
+  
+    REQ      UTL_HTTP.REQ;
+    RESP     UTL_HTTP.RESP;
+    RESP_VAL CLOB;
+  
+  BEGIN
+  
+    REQ := UTL_HTTP.BEGIN_REQUEST(IURL, 'POST');
+    UTL_HTTP.SET_HEADER(REQ, 'Content-Type', 'application/xml');
+    UTL_HTTP.SET_HEADER(REQ, 'Content-Length', LENGTH(IXML.getClobVal));
+  
+    UTL_HTTP.WRITE_TEXT(REQ, IXML.getClobVal);
+  
+    RESP := UTL_HTTP.GET_RESPONSE(REQ);
+  
+    DBMS_OUTPUT.PUT_LINE('Http Status Code: ' || RESP.STATUS_CODE);
+  
+    UTL_HTTP.READ_TEXT(RESP, RESP_VAL);
+  
+    DBMS_OUTPUT.PUT_LINE(RESP_VAL);
+  
+    UTL_HTTP.END_RESPONSE(RESP);
+  
+  EXCEPTION
+    WHEN OTHERS THEN
+    
+      BEGIN
+      
+        UTL_HTTP.END_RESPONSE(RESP);
+      
+      EXCEPTION
+        WHEN OTHERS THEN
+        
+          NULL;
+        
+      END;
+    
+      DBMS_OUTPUT.PUT_LINE(SQLERRM);
+    
+  END P_CALL_WEBSERVICE_XML;
 
   ------------------------------
   ---P_CALL_WEBSERVICE_XML_OUT--
@@ -111,9 +218,9 @@ CREATE OR REPLACE PACKAGE BODY PCK_CALL_WEBSERVICE IS
     --Pega a resposta
     RESP := UTL_HTTP.GET_RESPONSE(REQ);
   
-    DBMS_OUTPUT.PUT_LINE('HTTP Status Code: ' || RESP.STATUS_CODE);
+    DBMS_OUTPUT.PUT_LINE('Http Status Code: ' || RESP.STATUS_CODE);
   
-    --HTTP Response Code (200, 404, 500, ...)
+    --HTTP Response Code (200, 400, 404, 500, ...)
     OHTTP_STATUS := RESP.STATUS_CODE;
   
     --Armazena o retorno no CLOB
@@ -128,8 +235,18 @@ CREATE OR REPLACE PACKAGE BODY PCK_CALL_WEBSERVICE IS
   EXCEPTION
     WHEN OTHERS THEN
     
-      UTL_HTTP.END_RESPONSE(RESP);
-      OHTTP_STATUS := 999999;
+      BEGIN
+      
+        UTL_HTTP.END_RESPONSE(RESP);
+      
+      EXCEPTION
+        WHEN OTHERS THEN
+        
+          NULL;
+        
+      END;
+    
+      RAISE;
     
   END P_CALL_WEBSERVICE_XML_OUT;
 
@@ -209,6 +326,5 @@ CREATE OR REPLACE PACKAGE BODY PCK_CALL_WEBSERVICE IS
   
   END F_XML_BEAUTIFIER;
 
-END PCK_CALL_WEBSERVICE;
-
+END PCK_UTL_WEBSERVICE;
 /

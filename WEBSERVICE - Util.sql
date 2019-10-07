@@ -2,10 +2,11 @@ CREATE OR REPLACE PACKAGE PCK_UTL_WEBSERVICE IS
 
   PROCEDURE P_CALL_WEBSERVICE_JSON(IURL IN VARCHAR2, IJSON IN VARCHAR2);
 
-  PROCEDURE P_CALL_WEBSERVICE_JSON_OUT(IURL   IN VARCHAR2,
-                                       IJSON  IN CLOB,
-                                       METHOD IN VARCHAR2,
-                                       OJSON  OUT CLOB);
+  PROCEDURE P_CALL_WEBSERVICE_JSON_OUT(IURL         IN VARCHAR2,
+                                       IJSON        IN CLOB,
+                                       METHOD       IN VARCHAR2,
+                                       OJSON        OUT CLOB,
+                                       OHTTP_STATUS OUT NUMBER);
 
   PROCEDURE P_CALL_WEBSERVICE_XML(IURL IN VARCHAR2, IXML IN XMLTYPE);
 
@@ -84,28 +85,35 @@ CREATE OR REPLACE PACKAGE BODY PCK_UTL_WEBSERVICE IS
   -- Created : 01/10/2019
   -- Purpose : Procedure utilizada para enviar um JSON via WebService e ler o retorno
 
-  PROCEDURE P_CALL_WEBSERVICE_JSON_OUT(IURL   IN VARCHAR2,
-                                       IJSON  IN CLOB, --JSON de Entrada
-                                       METHOD IN VARCHAR2, --(POST, GET, PUT, ...)
-                                       OJSON  OUT CLOB) IS
+  PROCEDURE P_CALL_WEBSERVICE_JSON_OUT(IURL         IN VARCHAR2,
+                                       IJSON        IN CLOB, --JSON de Entrada
+                                       METHOD       IN VARCHAR2, --(POST, GET, PUT, ...)
+                                       OJSON        OUT CLOB,
+                                       OHTTP_STATUS OUT NUMBER) IS
   
     REQ  UTL_HTTP.REQ;
     RESP UTL_HTTP.RESP;
   
   BEGIN
   
+    --Monta o Header da requisição
     REQ := UTL_HTTP.BEGIN_REQUEST(IURL, METHOD);
     UTL_HTTP.SET_HEADER(REQ, 'Content-Type', 'application/json');
     UTL_HTTP.SET_HEADER(REQ, 'Content-Length', LENGTH(IJSON));
   
+    --Escreve o JSON na Requisição
     UTL_HTTP.WRITE_TEXT(REQ, IJSON);
   
+    --Envia e pega a resposta
     RESP := UTL_HTTP.GET_RESPONSE(REQ);
   
-    DBMS_OUTPUT.PUT_LINE('Http Status Code: ' || RESP.STATUS_CODE);
+    --HTTP Response Code (200, 400, 404, 500, ...)
+    OHTTP_STATUS := RESP.STATUS_CODE;
   
+    --Armazena o retorno no CLOB
     UTL_HTTP.READ_TEXT(RESP, OJSON);
   
+    --Fecha a conexão
     UTL_HTTP.END_RESPONSE(RESP);
   
   EXCEPTION
@@ -196,8 +204,7 @@ CREATE OR REPLACE PACKAGE BODY PCK_UTL_WEBSERVICE IS
   
   BEGIN
   
-    --Monta os dados de envio
-  
+    --Monta o Header da requisição
     REQ := UTL_HTTP.BEGIN_REQUEST(IURL, 'POST');
     UTL_HTTP.SET_BODY_CHARSET('UTF-8');
     UTL_HTTP.SET_HEADER(REQ, 'Content-Type', 'application/xml');
@@ -212,13 +219,11 @@ CREATE OR REPLACE PACKAGE BODY PCK_UTL_WEBSERVICE IS
     
     END IF;
   
-    --Envia o XML
+    --Escreve o XML na Requisição
     UTL_HTTP.WRITE_TEXT(REQ, IXML.getClobVal);
   
-    --Pega a resposta
+    --Envia e pega a resposta
     RESP := UTL_HTTP.GET_RESPONSE(REQ);
-  
-    DBMS_OUTPUT.PUT_LINE('Http Status Code: ' || RESP.STATUS_CODE);
   
     --HTTP Response Code (200, 400, 404, 500, ...)
     OHTTP_STATUS := RESP.STATUS_CODE;

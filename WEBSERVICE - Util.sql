@@ -5,6 +5,7 @@ CREATE OR REPLACE PACKAGE PCK_UTL_WEBSERVICE IS
   PROCEDURE P_CALL_WEBSERVICE_JSON_OUT(IURL         IN VARCHAR2,
                                        IJSON        IN CLOB,
                                        METHOD       IN VARCHAR2,
+                                       TOKEN        IN VARCHAR2 DEFAULT NULL,
                                        OJSON        OUT CLOB,
                                        OHTTP_STATUS OUT NUMBER);
 
@@ -21,11 +22,13 @@ CREATE OR REPLACE PACKAGE PCK_UTL_WEBSERVICE IS
 
   FUNCTION F_XML_BEAUTIFIER(IXML IN xmltype) RETURN CLOB;
 
+  FUNCTION F_CLOB_BEAUTIFIER(IXML IN CLOB) RETURN CLOB;
+  
+  FUNCTION F_IS_XML(IXML IN CLOB) RETURN NUMBER;
+
 END PCK_UTL_WEBSERVICE;
 
 /
-
-CREATE OR REPLACE PACKAGE BODY PCK_UTL_WEBSERVICE IS
 
   --------------------------
   --P_CALL_WEBSERVICE_JSON--
@@ -88,6 +91,7 @@ CREATE OR REPLACE PACKAGE BODY PCK_UTL_WEBSERVICE IS
   PROCEDURE P_CALL_WEBSERVICE_JSON_OUT(IURL         IN VARCHAR2,
                                        IJSON        IN CLOB, --JSON de Entrada
                                        METHOD       IN VARCHAR2, --(POST, GET, PUT, ...)
+                                       TOKEN        IN VARCHAR2 DEFAULT NULL,
                                        OJSON        OUT CLOB,
                                        OHTTP_STATUS OUT NUMBER) IS
   
@@ -100,6 +104,12 @@ CREATE OR REPLACE PACKAGE BODY PCK_UTL_WEBSERVICE IS
     REQ := UTL_HTTP.BEGIN_REQUEST(IURL, METHOD);
     UTL_HTTP.SET_HEADER(REQ, 'Content-Type', 'application/json');
     UTL_HTTP.SET_HEADER(REQ, 'Content-Length', LENGTH(IJSON));
+  
+    IF TOKEN IS NOT NULL THEN
+    
+      UTL_HTTP.set_header(REQ, 'token', TOKEN);
+    
+    END IF;
   
     --Escreve o JSON na Requisição
     UTL_HTTP.WRITE_TEXT(REQ, IJSON);
@@ -280,7 +290,7 @@ CREATE OR REPLACE PACKAGE BODY PCK_UTL_WEBSERVICE IS
   
     IF tXML IS NOT NULL THEN
     
-      RETURN F_XML_BEAUTIFIER(IXML => IXML);
+      RETURN F_XML_BEAUTIFIER(IXML => tXML);
     
     ELSE
     
@@ -311,7 +321,7 @@ CREATE OR REPLACE PACKAGE BODY PCK_UTL_WEBSERVICE IS
   -- Created : 28/05/2019
   -- Purpose : Function utilizada para transformar o XML gerado pelo Oracle em um XML legivel (Retorno para o usuario)
 
-  FUNCTION F_XML_BEAUTIFIER(IXML IN xmltype) RETURN CLOB IS
+  FUNCTION F_XML_BEAUTIFIER(IXML IN XMLTYPE) RETURN CLOB IS
   
     tClob CLOB;
   
@@ -330,6 +340,67 @@ CREATE OR REPLACE PACKAGE BODY PCK_UTL_WEBSERVICE IS
     RETURN tClob;
   
   END F_XML_BEAUTIFIER;
+
+  --------------------
+  --F_CLOB_BEAUTIFIER--
+  --------------------
+
+  -- Author  : Kauan Polydoro
+  -- Created : 01/11/2019
+  -- Purpose : Function utilizada para transformar o CLOB de um XML gerado pelo Oracle em um XML legivel (Retorno para o usuario)
+
+  FUNCTION F_CLOB_BEAUTIFIER(IXML IN CLOB) RETURN CLOB IS
+  
+    tClob CLOB;
+  
+  BEGIN
+  
+    tClob := IXML;
+  
+    tClob := REPLACE(tClob, '&lt;', '<');
+  
+    tClob := REPLACE(tClob, '&gt;', '>');
+  
+    tClob := REPLACE(tClob, '&quot;', '"');
+  
+    tClob := REPLACE(tClob, '&apos;', '''');
+  
+    RETURN tClob;
+  
+  END F_CLOB_BEAUTIFIER;
+
+  ------------
+  --F_IS_XML--
+  ------------
+
+  -- Author  : Kauan Polydoro
+  -- Created : 01/11/2019
+  -- Purpose : Function utilizada para verificar se o valor de entrada é um XML
+
+  FUNCTION F_IS_XML(IXML IN CLOB) RETURN NUMBER IS
+  
+    vXml XMLTYPE;
+  
+  BEGIN
+  
+    vXml := XMLTYPE(IXML);
+  
+    IF vXml IS NOT NULL THEN
+    
+      RETURN 1;
+    
+    ELSE
+    
+      RETURN 0;
+    
+    END IF;
+  
+  EXCEPTION
+    WHEN OTHERS THEN
+    
+      RETURN 2;
+    
+  END F_IS_XML;
 
 END PCK_UTL_WEBSERVICE;
 /

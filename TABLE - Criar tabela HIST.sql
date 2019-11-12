@@ -1,0 +1,29 @@
+SELECT DISTINCT 'CREATE TABLE ' || TABLE_NAME || '_HIST (' A
+  FROM ALL_TAB_COLUMNS
+ WHERE OWNER = 'SCHEMA'
+   AND TABLE_NAME LIKE 'TABLE_NAME'
+
+UNION ALL
+
+SELECT SUBSTR(COLUMN_NAME, 1, 2) || 'H' || SUBSTR(COLUMN_NAME, 3, 100) || ' ' ||
+       DATA_TYPE || CASE
+         WHEN CHAR_COL_DECL_LENGTH IS NOT NULL THEN
+          '(' || CHAR_COL_DECL_LENGTH || '),'
+         WHEN COLUMN_ID = (SELECT MAX(COLUMN_ID)
+                             FROM ALL_TAB_COLUMNS
+                            WHERE OWNER = 'SCHEMA'
+                              AND TABLE_NAME LIKE 'TABLE_NAME') THEN
+          NULL
+         ELSE
+          ','
+       END A
+  FROM (SELECT *
+          FROM ALL_TAB_COLUMNS
+         WHERE OWNER = 'SCHEMA'
+           AND TABLE_NAME LIKE 'TABLE_NAME'
+         ORDER BY COLUMN_ID ASC)
+
+UNION ALL
+
+SELECT ');'
+  FROM DUAL;

@@ -2,12 +2,14 @@ CREATE OR REPLACE PACKAGE PCK_UTL_WEBSERVICE IS
 
   PROCEDURE P_CALL_WEBSERVICE_JSON(IURL IN VARCHAR2, IJSON IN VARCHAR2);
 
-  PROCEDURE P_CALL_WEBSERVICE_JSON_OUT(IURL         IN VARCHAR2,
-                                       IJSON        IN CLOB,
-                                       METHOD       IN VARCHAR2,
-                                       TOKEN        IN VARCHAR2 DEFAULT NULL,
-                                       OJSON        OUT CLOB,
-                                       OHTTP_STATUS OUT NUMBER);
+  PROCEDURE P_CALL_WEBSERVICE_JSON_OUT(IURL            IN VARCHAR2,
+                                       IMIDDLEWARE_URL IN VARCHAR2 DEFAULT NULL,
+                                       IJSON           IN CLOB,
+                                       METHOD          IN VARCHAR2,
+                                       CONTENT_TYPE    IN VARCHAR2 DEFAULT NULL,
+                                       TOKEN           IN VARCHAR2 DEFAULT NULL,
+                                       OJSON           OUT CLOB,
+                                       OHTTP_STATUS    OUT NUMBER);
 
   PROCEDURE P_CALL_WEBSERVICE_XML(IURL IN VARCHAR2, IXML IN XMLTYPE);
 
@@ -23,12 +25,24 @@ CREATE OR REPLACE PACKAGE PCK_UTL_WEBSERVICE IS
   FUNCTION F_XML_BEAUTIFIER(IXML IN xmltype) RETURN CLOB;
 
   FUNCTION F_CLOB_BEAUTIFIER(IXML IN CLOB) RETURN CLOB;
-  
+
   FUNCTION F_IS_XML(IXML IN CLOB) RETURN NUMBER;
+
+  FUNCTION F_IS_NUMBER(P_STRING IN VARCHAR2) RETURN BOOLEAN;
+
+  PROCEDURE P_CALL_WEBSERVICE(IURL         IN VARCHAR2,
+                              IDATA        IN CLOB,
+                              METHOD       IN VARCHAR2,
+                              HEADERS      IN WS_HEADER_ARRAY,
+                              OJSON        OUT CLOB,
+                              OHTTP_STATUS OUT NUMBER);
 
 END PCK_UTL_WEBSERVICE;
 
+
 /
+
+  CREATE OR REPLACE PACKAGE BODY PCK_UTL_WEBSERVICE IS
 
   --------------------------
   --P_CALL_WEBSERVICE_JSON--
@@ -54,11 +68,11 @@ END PCK_UTL_WEBSERVICE;
   
     RESP := UTL_HTTP.GET_RESPONSE(REQ);
   
-    DBMS_OUTPUT.PUT_LINE('Http Status Code: ' || RESP.STATUS_CODE);
+    --DBMS_OUTPUT.PUT_LINE('Http Status Code: ' || RESP.STATUS_CODE);
   
     UTL_HTTP.READ_TEXT(RESP, RESP_VAL);
   
-    DBMS_OUTPUT.PUT_LINE(RESP_VAL);
+    --DBMS_OUTPUT.PUT_LINE(RESP_VAL);
   
     UTL_HTTP.END_RESPONSE(RESP);
   
@@ -76,8 +90,8 @@ END PCK_UTL_WEBSERVICE;
         
       END;
     
-      DBMS_OUTPUT.PUT_LINE(SQLERRM);
-    
+    --DBMS_OUTPUT.PUT_LINE(SQLERRM);
+  
   END P_CALL_WEBSERVICE_JSON;
 
   ------------------------------
@@ -88,31 +102,75 @@ END PCK_UTL_WEBSERVICE;
   -- Created : 01/10/2019
   -- Purpose : Procedure utilizada para enviar um JSON via WebService e ler o retorno
 
-  PROCEDURE P_CALL_WEBSERVICE_JSON_OUT(IURL         IN VARCHAR2,
-                                       IJSON        IN CLOB, --JSON de Entrada
-                                       METHOD       IN VARCHAR2, --(POST, GET, PUT, ...)
-                                       TOKEN        IN VARCHAR2 DEFAULT NULL,
-                                       OJSON        OUT CLOB,
-                                       OHTTP_STATUS OUT NUMBER) IS
+  PROCEDURE P_CALL_WEBSERVICE_JSON_OUT(IURL            IN VARCHAR2,
+                                       IMIDDLEWARE_URL IN VARCHAR2 DEFAULT NULL,
+                                       IJSON           IN CLOB, --JSON de Entrada
+                                       METHOD          IN VARCHAR2, --(POST, GET, PUT, ...)
+                                       CONTENT_TYPE    IN VARCHAR2 DEFAULT NULL,
+                                       TOKEN           IN VARCHAR2 DEFAULT NULL,
+                                       OJSON           OUT CLOB,
+                                       OHTTP_STATUS    OUT NUMBER) IS
   
     REQ  UTL_HTTP.REQ;
     RESP UTL_HTTP.RESP;
   
   BEGIN
   
-    --Monta o Header da requisição
-    REQ := UTL_HTTP.BEGIN_REQUEST(IURL, METHOD);
-    UTL_HTTP.SET_HEADER(REQ, 'Content-Type', 'application/json');
-    UTL_HTTP.SET_HEADER(REQ, 'Content-Length', LENGTH(IJSON));
+    ----------
+    --Header--
+    ----------
   
-    IF TOKEN IS NOT NULL THEN
+    --Verifica se esta utilizando uma URL intermediária
+    IF IMIDDLEWARE_URL IS NOT NULL THEN
     
-      UTL_HTTP.set_header(REQ, 'token', TOKEN);
+      REQ := UTL_HTTP.BEGIN_REQUEST(IMIDDLEWARE_URL, METHOD);
+      UTL_HTTP.SET_HEADER(REQ, 'url', IURL);
+    
+    ELSE
+    
+      REQ := UTL_HTTP.BEGIN_REQUEST(IURL, METHOD);
     
     END IF;
   
+    --Adiciona o Content-Type
+    IF CONTENT_TYPE IS NOT NULL THEN
+    
+      UTL_HTTP.SET_HEADER(REQ, 'Content-Type', CONTENT_TYPE);
+    
+    ELSE
+    
+      UTL_HTTP.SET_HEADER(REQ, 'Content-Type', 'application/json');
+    
+    END IF;
+  
+    --Adiciona o Tamanho da mensagem
+    UTL_HTTP.SET_HEADER(REQ, 'Content-Length', LENGTH(IJSON));
+  
+    --Adiciona o token
+    IF TOKEN IS NOT NULL THEN
+    
+      UTL_HTTP.SET_HEADER(REQ, 'token', TOKEN);
+    
+    END IF;
+  
+    --------------
+    --End Header--
+    --------------
+  
+    --------
+    --Body--
+    --------
+  
     --Escreve o JSON na Requisição
     UTL_HTTP.WRITE_TEXT(REQ, IJSON);
+  
+    ------------
+    --End Body--
+    ------------
+  
+    ------------
+    --Response--
+    ------------
   
     --Envia e pega a resposta
     RESP := UTL_HTTP.GET_RESPONSE(REQ);
@@ -123,6 +181,10 @@ END PCK_UTL_WEBSERVICE;
     --Armazena o retorno no CLOB
     UTL_HTTP.READ_TEXT(RESP, OJSON);
   
+    ----------------
+    --End Response--
+    ----------------
+  
     --Fecha a conexão
     UTL_HTTP.END_RESPONSE(RESP);
   
@@ -131,6 +193,7 @@ END PCK_UTL_WEBSERVICE;
     
       BEGIN
       
+        --Fecha a conexão
         UTL_HTTP.END_RESPONSE(RESP);
       
       EXCEPTION
@@ -168,11 +231,11 @@ END PCK_UTL_WEBSERVICE;
   
     RESP := UTL_HTTP.GET_RESPONSE(REQ);
   
-    DBMS_OUTPUT.PUT_LINE('Http Status Code: ' || RESP.STATUS_CODE);
+    --DBMS_OUTPUT.PUT_LINE('Http Status Code: ' || RESP.STATUS_CODE);
   
     UTL_HTTP.READ_TEXT(RESP, RESP_VAL);
   
-    DBMS_OUTPUT.PUT_LINE(RESP_VAL);
+    --DBMS_OUTPUT.PUT_LINE(RESP_VAL);
   
     UTL_HTTP.END_RESPONSE(RESP);
   
@@ -190,8 +253,8 @@ END PCK_UTL_WEBSERVICE;
         
       END;
     
-      DBMS_OUTPUT.PUT_LINE(SQLERRM);
-    
+    --DBMS_OUTPUT.PUT_LINE(SQLERRM);
+  
   END P_CALL_WEBSERVICE_XML;
 
   ------------------------------
@@ -402,5 +465,143 @@ END PCK_UTL_WEBSERVICE;
     
   END F_IS_XML;
 
+  ---------------  
+  --F_IS_NUMBER--
+  ---------------
+
+  -- Author  : Kauan Polydoro
+  -- Created : 27/11/2019
+  -- Purpose : Function utilizada para verificar se o valor de entrada é um NUMBER
+
+  FUNCTION F_IS_NUMBER(P_STRING IN VARCHAR2) RETURN BOOLEAN IS
+  
+    V_NEW_NUM NUMBER;
+  
+  BEGIN
+  
+    V_NEW_NUM := TO_NUMBER(P_STRING);
+  
+    IF V_NEW_NUM IS NOT NULL THEN
+    
+      RETURN TRUE;
+    
+    ELSE
+    
+      RETURN FALSE;
+    
+    END IF;
+  
+  EXCEPTION
+    WHEN VALUE_ERROR THEN
+    
+      RETURN FALSE;
+    
+  END F_IS_NUMBER;
+
+  ---------------------
+  --P_CALL_WEBSERVICE--
+  ---------------------
+
+  -- Author  : Kauan Polydoro
+  -- Created : 29/11/2019
+  -- Purpose : Procedure utilizada para realizar comunicação WebService independente do tipo de Entrada ou Saída
+
+  PROCEDURE P_CALL_WEBSERVICE(IURL         IN VARCHAR2,
+                              IDATA        IN CLOB, --Dados de Entrada
+                              METHOD       IN VARCHAR2,
+                              HEADERS      IN WS_HEADER_ARRAY,
+                              OJSON        OUT CLOB,
+                              OHTTP_STATUS OUT NUMBER) IS
+  
+    REQ  UTL_HTTP.REQ;
+    RESP UTL_HTTP.RESP;
+  
+    vFlagContentType NUMBER := 0;
+  
+  BEGIN
+  
+    --Inicia a Requisição
+    REQ := UTL_HTTP.BEGIN_REQUEST(IURL, METHOD);
+  
+    --Adiciona todos os Headers
+    FOR I IN 1 .. HEADERS.COUNT LOOP
+    
+      IF HEADERS(I).HEADER_KEY = 'Content-Type' THEN
+      
+        vFlagContentType := 1;
+      
+      END IF;
+    
+      IF HEADERS(I).HEADER_KEY IS NOT NULL AND HEADERS(I).HEADER_VALUE IS NOT NULL THEN
+      
+        UTL_HTTP.SET_HEADER(REQ,
+                            HEADERS(I).HEADER_KEY,
+                            HEADERS(I).HEADER_VALUE);
+      
+      END IF;
+    
+    END LOOP;
+  
+    --Adiciona um Content-Type default
+    IF vFlagContentType = 0 THEN
+    
+      IF IDATA IS JSON THEN
+      
+        UTL_HTTP.SET_HEADER(REQ, 'Content-Type', 'application/json');
+      
+      ELSIF F_IS_XML(IDATA) = 1 THEN
+      
+        UTL_HTTP.SET_HEADER(REQ, 'Content-Type', 'application/xml');
+      
+      ELSE
+      
+        UTL_HTTP.SET_HEADER(REQ, 'Content-Type', 'application/json');
+      
+      END IF;
+    
+    END IF;
+  
+    --Adiciona o Tamanho da mensagem
+    IF LENGTH(IDATA) > 0 AND IDATA IS NOT NULL THEN
+    
+      UTL_HTTP.SET_HEADER(REQ, 'Content-Length', LENGTH(IDATA));
+    
+    END IF;
+  
+    --Escreve o JSON na Requisição
+    UTL_HTTP.WRITE_TEXT(REQ, IDATA);
+  
+    --Envia e pega a resposta
+    RESP := UTL_HTTP.GET_RESPONSE(REQ);
+  
+    --HTTP Response Code (200, 400, 404, 500, ...)
+    OHTTP_STATUS := RESP.STATUS_CODE;
+  
+    --Armazena o retorno no CLOB
+    UTL_HTTP.READ_TEXT(RESP, OJSON);
+  
+    --Fecha a conexão
+    UTL_HTTP.END_RESPONSE(RESP);
+  
+  EXCEPTION
+    WHEN OTHERS THEN
+    
+      BEGIN
+      
+        --Fecha a conexão
+        UTL_HTTP.END_RESPONSE(RESP);
+      
+      EXCEPTION
+        WHEN OTHERS THEN
+        
+          NULL;
+        
+      END;
+    
+      RAISE;
+    
+  END P_CALL_WEBSERVICE;
+
 END PCK_UTL_WEBSERVICE;
+
 /

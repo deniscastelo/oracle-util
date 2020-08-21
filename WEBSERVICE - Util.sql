@@ -584,6 +584,20 @@ END PCK_UTL_WEBSERVICE;
     UTL_HTTP.END_RESPONSE(RESP);
   
   EXCEPTION
+    WHEN UTL_HTTP.END_OF_BODY THEN
+    
+      BEGIN
+      
+        --Fecha a conexão
+        UTL_HTTP.END_RESPONSE(RESP);
+      
+      EXCEPTION
+        WHEN OTHERS THEN
+        
+          NULL;
+        
+      END;
+    
     WHEN OTHERS THEN
     
       BEGIN

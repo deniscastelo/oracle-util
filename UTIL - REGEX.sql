@@ -2,6 +2,7 @@
 ----------------------------------------------------------
 
 REGEX para mudar de camelCase para snake_case
+O regex deve ser realizado em case sensitive
 
 ([a-zA-Z][a-z]*)([A-Z])
 
@@ -11,7 +12,7 @@ REGEX para mudar de camelCase para snake_case
 
 Pega todas as procedures da página para montar o Header
 
-(PROCEDURE\s\w+(\([\w\s,.%]+\))?)
+([^-]PROCEDURE\s\w+(\([\w\s,.%]+\))?)
 \1;\n
 
 ----------------------------------------------------------

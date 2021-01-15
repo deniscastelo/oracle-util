@@ -2,13 +2,12 @@ SELECT 'CREATE TABLE ' || '&TABLE_NAME' || '_HIST (' SCRIPT
   FROM DUAL
 UNION ALL
 SELECT SCRIPT
-  FROM (SELECT SUBSTR(COLUMN_NAME, 1, 3) || 'H' ||
-               SUBSTR(COLUMN_NAME, 4, 90) || ' ' || data_type || CASE
-                 WHEN DATA_LENGTH = '22' AND
-                      (DATA_SCALE IS NULL OR DATA_SCALE = 0) AND
-                      data_type = 'NUMBER' THEN
+  FROM (SELECT SUBSTR(COLUMN_NAME, 1, 2) || 'H' ||
+               SUBSTR(COLUMN_NAME, 3, 90) || ' ' || DATA_TYPE || CASE
+                 WHEN DATA_TYPE = 'NUMBER' AND DATA_PRECISION IS NOT NULL THEN
+                  '(' || DATA_PRECISION || ',' || DATA_SCALE || ')'
+                 WHEN DATA_TYPE = 'CLOB' THEN
                   NULL
-                 WHEN DATA_TYPE = 'CLOB' THEN NULL
                  WHEN DATA_TYPE = 'DATE' THEN
                   NULL
                  WHEN DATA_LENGTH IS NOT NULL THEN
@@ -21,7 +20,7 @@ SELECT SCRIPT
                  ELSE
                   NULL
                END || ' ' || CASE
-                 WHEN nullable = 'Y' THEN
+                 WHEN NULLABLE = 'Y' THEN
                   'NOT NULL'
                END || CASE
                  WHEN COLUMN_ID =

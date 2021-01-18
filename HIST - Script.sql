@@ -22,10 +22,12 @@ BEGIN
   IF vCountExistsTable = 0 THEN
   
     DBMS_OUTPUT.PUT_LINE('TABELA NÃO EXISTE');
+    vError := TRUE;
   
   ELSIF vCountExistsTable > 1 AND vSchema IS NULL THEN
   
     DBMS_OUTPUT.PUT_LINE('EXISTEM 2 TABELAS COM ESSE NOME, FAVOR INFORMAR O SCHEMA');
+    vError := TRUE;
   
   END IF;
 
@@ -49,6 +51,7 @@ BEGIN
                ORDER BY COLUMN_ID) LOOP
     
       vColumn := REGEXP_REPLACE(I.COLUMN_NAME, '([A-Z]+)(_\w+)', '\1H\2');
+      vColumn := vColumn || ' ' || I.DATA_TYPE;
     
       IF I.DATA_TYPE = 'NUMBER' AND I.DATA_PRECISION IS NOT NULL THEN
       
@@ -62,7 +65,7 @@ BEGIN
       
         vColumn := vColumn || ')';
       
-      ELSIF I.DATA_LENGTH IS NOT NULL THEN
+      ELSIF I.DATA_LENGTH IS NOT NULL AND I.DATA_TYPE = 'VARCHAR2' THEN
       
         vColumn := vColumn || '(' || I.DATA_LENGTH || ')';
       
@@ -139,8 +142,8 @@ BEGIN
       DBMS_OUTPUT.PUT_LINE(vColumn);
     
     END LOOP;
-    
-    DBMS_OUTPUT.PUT_LINE(''); 
+  
+    DBMS_OUTPUT.PUT_LINE('');
     DBMS_OUTPUT.PUT_LINE('END;');
   
   END IF;

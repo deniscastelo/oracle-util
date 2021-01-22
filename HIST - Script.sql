@@ -258,7 +258,12 @@ BEGIN
       
         DBMS_OUTPUT.PUT_LINE('');
       
+        DBMS_OUTPUT.PUT_LINE('END IF;');
+      
+        DBMS_OUTPUT.PUT_LINE('');
+      
         DBMS_OUTPUT.PUT_LINE('END;');
+        DBMS_OUTPUT.PUT_LINE('/');
       
       ELSE
       
@@ -336,6 +341,7 @@ BEGIN
       DBMS_OUTPUT.PUT_LINE(');');
       DBMS_OUTPUT.PUT_LINE('');
       DBMS_OUTPUT.PUT_LINE('END;');
+      DBMS_OUTPUT.PUT_LINE('/');
     
     END IF;
   
@@ -374,7 +380,7 @@ BEGIN
       --SPEC--
       --------
     
-      DBMS_OUTPUT.PUT_LINE(''); 
+      DBMS_OUTPUT.PUT_LINE('');
       DBMS_OUTPUT.PUT_LINE('CREATE OR REPLACE PACKAGE ' || vPackageName ||
                            ' IS');
     
@@ -510,7 +516,7 @@ BEGIN
     
       DBMS_OUTPUT.PUT_LINE('P_' || vColumnId || ' IN ' || vTabela || '.' ||
                            vColumnId || '%TYPE,');
-      DBMS_OUTPUT.PUT_LINE('P_' || vColumnId || ' IN ' || vTabela || '.' ||
+      DBMS_OUTPUT.PUT_LINE('P_' || vPrefix || 'STATUS IN ' || vTabela || '.' ||
                            vPrefix || 'STATUS' || '%TYPE);');
     
       ------------
@@ -568,7 +574,7 @@ BEGIN
       END LOOP;
     
       DBMS_OUTPUT.PUT_LINE('P_' || vColumnId || ' OUT ' || vTabela || '.' ||
-                           vColumnId || '%TYPE);');
+                           vColumnId || '%TYPE) IS');
     
       DBMS_OUTPUT.PUT_LINE('');
       DBMS_OUTPUT.PUT_LINE('BEGIN');
@@ -829,12 +835,83 @@ BEGIN
           vColumn := vColumn || ',';
         
         END IF;
-        
-        DBMS_OUTPUT.PUT_LINE(vColumn); 
+      
+        DBMS_OUTPUT.PUT_LINE(vColumn);
       
       END LOOP;
     
       DBMS_OUTPUT.PUT_LINE('WHERE ' || vColumnId || ' = P_' || vColumnId || ';');
+    
+      DBMS_OUTPUT.PUT_LINE('');
+      DBMS_OUTPUT.PUT_LINE('END ' || vProcedureName || ';');
+    
+      --------------------
+      --PROCEDURE DELETE--
+      --------------------
+    
+      vProcedureName := 'P_DEL_' || vTabela;
+    
+      DBMS_OUTPUT.PUT_LINE('');
+      DBMS_OUTPUT.PUT_LINE(RPAD('-', LENGTH(vProcedureName) + 4, '-'));
+      DBMS_OUTPUT.PUT_LINE('--' || vProcedureName || '--');
+      DBMS_OUTPUT.PUT_LINE(RPAD('-', LENGTH(vProcedureName) + 4, '-'));
+      DBMS_OUTPUT.PUT_LINE('');
+    
+      DBMS_OUTPUT.PUT_LINE('-- Author  : ');
+      DBMS_OUTPUT.PUT_LINE('-- Created : ' ||
+                           TO_CHAR(SYSDATE, 'DD/MM/YYYY'));
+      DBMS_OUTPUT.PUT_LINE('-- Purpose : ');
+      DBMS_OUTPUT.PUT_LINE('');
+    
+      DBMS_OUTPUT.PUT_LINE('PROCEDURE ' || vProcedureName || '(');
+    
+      DBMS_OUTPUT.PUT_LINE('P_' || vColumnId || ' IN ' || vTabela || '.' ||
+                           vColumnId || '%TYPE) IS');
+    
+      DBMS_OUTPUT.PUT_LINE('');
+      DBMS_OUTPUT.PUT_LINE('BEGIN');
+      DBMS_OUTPUT.PUT_LINE('');
+      DBMS_OUTPUT.PUT_LINE('DELETE FROM ' || vTabela || ' WHERE ' ||
+                           vColumnId || ' = P_' || vColumnId || ';');
+    
+      DBMS_OUTPUT.PUT_LINE('');
+      DBMS_OUTPUT.PUT_LINE('END ' || vProcedureName || ';');
+    
+      --------------------
+      --PROCEDURE TOGGLE--
+      --------------------
+    
+      vProcedureName := 'P_TOGGLE_' || vTabela;
+    
+      DBMS_OUTPUT.PUT_LINE('');
+      DBMS_OUTPUT.PUT_LINE(RPAD('-', LENGTH(vProcedureName) + 4, '-'));
+      DBMS_OUTPUT.PUT_LINE('--' || vProcedureName || '--');
+      DBMS_OUTPUT.PUT_LINE(RPAD('-', LENGTH(vProcedureName) + 4, '-'));
+      DBMS_OUTPUT.PUT_LINE('');
+    
+      DBMS_OUTPUT.PUT_LINE('-- Author  : ');
+      DBMS_OUTPUT.PUT_LINE('-- Created : ' ||
+                           TO_CHAR(SYSDATE, 'DD/MM/YYYY'));
+      DBMS_OUTPUT.PUT_LINE('-- Purpose : ');
+      DBMS_OUTPUT.PUT_LINE('');
+    
+      DBMS_OUTPUT.PUT_LINE('PROCEDURE ' || vProcedureName || '(');
+    
+      DBMS_OUTPUT.PUT_LINE('P_' || vColumnId || ' IN ' || vTabela || '.' ||
+                           vColumnId || '%TYPE,');
+    
+      DBMS_OUTPUT.PUT_LINE('P_' || vPrefix || 'STATUS IN ' || vTabela || '.' ||
+                           vPrefix || 'STATUS%TYPE) IS');
+    
+      DBMS_OUTPUT.PUT_LINE('');
+      DBMS_OUTPUT.PUT_LINE('BEGIN');
+      DBMS_OUTPUT.PUT_LINE('');
+      DBMS_OUTPUT.PUT_LINE('UPDATE ' || vTabela);
+      DBMS_OUTPUT.PUT_LINE('SET ' || vPrefix || 'STATUS = P_' || vPrefix ||
+                           'STATUS');
+      DBMS_OUTPUT.PUT_LINE('WHERE ' || vColumnId || ' = P_' || vColumnId);
+      DBMS_OUTPUT.PUT_LINE('AND ' || vPrefix || 'STATUS != P_' || vPrefix ||
+                           'STATUS;');
     
       DBMS_OUTPUT.PUT_LINE('');
       DBMS_OUTPUT.PUT_LINE('END ' || vProcedureName || ';');

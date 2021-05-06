@@ -8,8 +8,8 @@ DECLARE
   vHistTable           BOOLEAN := TRUE; --Gera tabela de histórico
   vDeleteTrigger       BOOLEAN := TRUE; --Gera Trigger de delete
   vInsertUpdateTrigger BOOLEAN := TRUE; --Gera Trigger de Insert / Update
-  vProcessPackage      BOOLEAN := TRUE;
-  vUiwPackage          BOOLEAN := TRUE;
+  vProcessPackage      BOOLEAN := FALSE;
+  vUiwPackage          BOOLEAN := FALSE;
 
   --Script Variables--
   vColumn           VARCHAR2(4000);

@@ -12,7 +12,7 @@ O regex deve ser realizado em case sensitive
 
 Pega todas as procedures da página para montar o Header
 
-([^-]PROCEDURE\s\w+(\([\w\s,.%]+\))?)
+([^-](PROCEDURE|FUNCTION)\s\w+(\([\w\s,.%]+\))?(\s+RETURN\s\w+)?)
 \1;\n
 
 ----------------------------------------------------------
